@@ -3,8 +3,7 @@ import { spotifyApi } from "@/lib/spotify";
 
 export async function getAdminSpotifyApi() {
     const host = await prisma.user.findFirst({
-        where: { refreshToken: { not: null } },
-        orderBy: { createdAt: 'asc' },
+        where: { isHost: true, refreshToken: { not: null } },
     });
 
     console.log("host : !?!?" + host);

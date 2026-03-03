@@ -41,11 +41,13 @@ export async function POST(request: Request) {
         }
 
         // Get current max position
-        const maxPos = await prisma.request.aggregate({
-            _max: { position: true },
-            where: { status: 'PENDING' }
+        const lastRequest = await prisma.request.findFirst({
+            where: { status: 'PENDING' },
+            orderBy: { position: 'desc' },
+            select: { position: true }
         });
-        const nextPosition = (maxPos._max.position ?? -1) + 1;
+        const currentMax = lastRequest?.position ?? -1;
+        const nextPosition = currentMax + 1;
 
         const newRequest = await prisma.request.create({
             data: {

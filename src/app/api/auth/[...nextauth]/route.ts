@@ -38,6 +38,7 @@ export const authOptions: NextAuthOptions = {
                 if (token.email) {
                     try {
                         console.log("Saving/Updating user in DB:", token.email);
+                        const isHost = token.email === process.env.SPOTIFY_HOST_EMAIL;
                         const user = await prisma.user.upsert({
                             where: { email: token.email },
                             update: {
@@ -45,6 +46,7 @@ export const authOptions: NextAuthOptions = {
                                 refreshToken: account.refresh_token,
                                 accessToken: account.access_token,
                                 expiresAt: account.expires_at,
+                                isHost,
                             },
                             create: {
                                 email: token.email,
@@ -52,6 +54,7 @@ export const authOptions: NextAuthOptions = {
                                 refreshToken: account.refresh_token,
                                 accessToken: account.access_token,
                                 expiresAt: account.expires_at,
+                                isHost,
                             },
                         });
                         console.log("User upsert success:", user.id, "Refresh Token:", !!user.refreshToken);
@@ -69,6 +72,9 @@ export const authOptions: NextAuthOptions = {
             session.accessToken = token.accessToken;
             return session;
         },
+    },
+    pages: {
+        error: "/auth/error",
     },
 };
 
