@@ -5,3 +5,18 @@
     @apply bg-zinc-950 text-zinc-50;
   }
 }
+
+@layer utilities {
+  @keyframes slow-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-slow-spin {
+    animation: slow-spin 8s linear infinite;
+  }
+}

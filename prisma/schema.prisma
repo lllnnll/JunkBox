@@ -17,6 +17,20 @@ model User {
   isHost       Boolean   @default(false)
   createdAt    DateTime  @default(now())
   requests     Request[]
+  rooms        Room[]    // Rooms this user is a host of
+}
+
+model Room {
+  id        String    @id @default(cuid())
+  email     String    @unique // Host's Spotify email
+  name      String?
+  createdAt DateTime  @default(now())
+  
+  host      User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  hostId    String
+  
+  requests  Request[]
+  settings  RoomSetting[]
 }
 
 model Request {
@@ -32,9 +46,23 @@ model Request {
 
   user   User?   @relation(fields: [userId], references: [id])
   userId String?
+  
+  room   Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId String
 }
 
 model Setting {
   key   String @id
   value String
+}
+
+model RoomSetting {
+  id    String @id @default(cuid())
+  key   String
+  value String
+  
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId String
+  
+  @@unique([roomId, key])
 }
