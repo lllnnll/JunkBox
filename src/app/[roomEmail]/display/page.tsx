@@ -78,7 +78,7 @@ export default function DisplayPage() {
                             <img
                                 src={currentTrack.albumArt}
                                 alt="Album Art"
-                                className={`w-96 h-96 rounded-2xl shadow-2xl object-cover ring-2 ring-white/10 ${currentTrack.isPlaying ? 'animate-slow-spin' : ''}`}
+                                className={`w-96 h-96 rounded-2xl shadow-2xl object-cover ring-2 ring-white/10`}
                             />
                         ) : (
                             <div className="w-96 h-96 rounded-2xl bg-zinc-900 flex items-center justify-center border border-zinc-800">
