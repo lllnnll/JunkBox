@@ -5,6 +5,22 @@ import { prisma } from '@/lib/prisma';
 import { getAdminSpotifyApi } from '@/lib/spotify-admin';
 import { getRoomBySlug, getRoomSetting, isRoomActiveBySlug } from '@/lib/room';
 
+function formatDurationFr(totalSeconds: number): string {
+    const safeSeconds = Math.max(0, totalSeconds);
+    const minutes = Math.floor(safeSeconds / 60);
+    const seconds = safeSeconds % 60;
+
+    if (minutes === 0) {
+        return `${seconds} seconde${seconds > 1 ? 's' : ''}`;
+    }
+
+    if (seconds === 0) {
+        return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+    }
+
+    return `${minutes} minute${minutes > 1 ? 's' : ''} et ${seconds} seconde${seconds > 1 ? 's' : ''}`;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const roomSlug = request.headers.get('x-room-slug');
@@ -48,7 +64,8 @@ export async function POST(request: NextRequest) {
                 if (diff < cooldownMs) {
                     const remaining = Math.ceil((cooldownMs - diff) / 1000);
                     return NextResponse.json({
-                        error: `Veuillez patienter ${remaining} secondes avant de rajouter une musique.`
+                        error: `Veuillez patienter ${formatDurationFr(remaining)} avant de rajouter une musique.`,
+                        remainingSeconds: remaining
                     }, { status: 429 });
                 }
             }

@@ -32,6 +32,8 @@ export default function AdminPage() {
     const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [cooldown, setCooldown] = useState<number>(0);
+    const [cooldownMinutes, setCooldownMinutes] = useState<number>(0);
+    const [cooldownSecondsPart, setCooldownSecondsPart] = useState<number>(0);
     const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
     // Redirect if not authenticated
@@ -52,7 +54,10 @@ export default function AdminPage() {
             const settingsRes = await fetch(`/${encodeURIComponent(roomSlug)}/api/admin/settings`);
             const settingsData = await settingsRes.json();
             if (typeof settingsData.cooldownSeconds === "number") {
-                setCooldown(settingsData.cooldownSeconds);
+                const totalSeconds = Math.max(0, settingsData.cooldownSeconds);
+                setCooldown(totalSeconds);
+                setCooldownMinutes(Math.floor(totalSeconds / 60));
+                setCooldownSecondsPart(totalSeconds % 60);
             }
         } catch (e) {
             console.error(e);
@@ -138,16 +143,29 @@ export default function AdminPage() {
     };
 
     const handleCooldownChange = async (value: number) => {
-        setCooldown(value);
+        const normalizedValue = Math.max(0, value);
+        setCooldown(normalizedValue);
         try {
             await fetch(`/${encodeURIComponent(roomSlug)}/api/admin/settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ cooldownSeconds: value }),
+                body: JSON.stringify({ cooldownSeconds: normalizedValue }),
             });
         } catch (e) {
             console.error(e);
         }
+    };
+
+    const handleCooldownMinutesChange = (value: number) => {
+        const safeMinutes = Math.max(0, Math.min(60, value));
+        setCooldownMinutes(safeMinutes);
+        handleCooldownChange((safeMinutes * 60) + cooldownSecondsPart);
+    };
+
+    const handleCooldownSecondsPartChange = (value: number) => {
+        const safeSeconds = Math.max(0, Math.min(59, value));
+        setCooldownSecondsPart(safeSeconds);
+        handleCooldownChange((cooldownMinutes * 60) + safeSeconds);
     };
 
     if (!session) {
@@ -201,23 +219,44 @@ export default function AdminPage() {
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium mb-3 text-zinc-300">
-                                Cooldown between requests (seconds)
+                                Cooldown between requests
                             </label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="3600"
-                                value={cooldown}
-                                onChange={(e) => {
-                                    const nextValue = Number.parseInt(e.target.value, 10);
-                                    if (!Number.isNaN(nextValue)) {
-                                        handleCooldownChange(nextValue);
-                                    }
-                                }}
-                                className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-white/10 text-white focus:outline-none focus:border-green-500"
-                            />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs text-zinc-500 mb-2">Minutes</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="60"
+                                        value={cooldownMinutes}
+                                        onChange={(e) => {
+                                            const nextValue = Number.parseInt(e.target.value, 10);
+                                            if (!Number.isNaN(nextValue)) {
+                                                handleCooldownMinutesChange(nextValue);
+                                            }
+                                        }}
+                                        className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-white/10 text-white focus:outline-none focus:border-green-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-zinc-500 mb-2">Secondes</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="59"
+                                        value={cooldownSecondsPart}
+                                        onChange={(e) => {
+                                            const nextValue = Number.parseInt(e.target.value, 10);
+                                            if (!Number.isNaN(nextValue)) {
+                                                handleCooldownSecondsPartChange(nextValue);
+                                            }
+                                        }}
+                                        className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-white/10 text-white focus:outline-none focus:border-green-500"
+                                    />
+                                </div>
+                            </div>
                             <p className="text-xs text-zinc-500 mt-2">
-                                Users must wait this many seconds between adding songs
+                                Users must wait {cooldownMinutes} min {cooldownSecondsPart} s between adding songs
                             </p>
                         </div>
                     </div>

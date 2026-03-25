@@ -25,6 +25,31 @@ export default function RoomPage() {
   const [isNameSet, setIsNameSet] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [remainingCooldown, setRemainingCooldown] = useState<number>(0);
+
+  const formatCooldown = (seconds: number) => {
+    const safeSeconds = Math.max(0, seconds);
+    const minutes = Math.floor(safeSeconds / 60);
+    const secondsPart = safeSeconds % 60;
+
+    if (minutes === 0) {
+      return `${secondsPart}s`;
+    }
+
+    return `${minutes}m ${secondsPart.toString().padStart(2, '0')}s`;
+  };
+
+  const cooldownActive = remainingCooldown > 0;
+
+  useEffect(() => {
+    if (!cooldownActive) return;
+
+    const timer = setInterval(() => {
+      setRemainingCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldownActive]);
 
   useEffect(() => {
     const storedName = localStorage.getItem("junkbox_username");
@@ -67,6 +92,11 @@ export default function RoomPage() {
       return;
     }
 
+    if (cooldownActive) {
+      setFeedback({ type: 'error', text: `⏳ Attends encore ${formatCooldown(remainingCooldown)} avant d’ajouter une musique.` });
+      return;
+    }
+
     setAddingId(track.id);
     try {
       const res = await fetch(`/${encodeURIComponent(roomSlug)}/api/queue`, {
@@ -88,6 +118,9 @@ export default function RoomPage() {
         setQuery('');
         setTimeout(() => setFeedback(null), 3000);
       } else {
+        if (res.status === 429 && typeof data.remainingSeconds === 'number') {
+          setRemainingCooldown(Math.max(0, data.remainingSeconds));
+        }
         setFeedback({ type: 'error', text: data.error || 'Failed to add track' });
         setTimeout(() => setFeedback(null), 3000);
       }
@@ -164,6 +197,13 @@ export default function RoomPage() {
               </div>
             )}
 
+            {cooldownActive && (
+              <div className="p-4 rounded-lg border bg-orange-500/10 border-orange-500/30 text-orange-300 flex items-center justify-between">
+                <span className="text-sm">Prochain ajout disponible dans</span>
+                <span className="text-lg font-semibold tabular-nums">{formatCooldown(remainingCooldown)}</span>
+              </div>
+            )}
+
             {/* Search Section */}
             <section className="space-y-4">
               <div className="relative">
@@ -200,8 +240,8 @@ export default function RoomPage() {
                       </div>
                       <button
                         onClick={() => addTrackToQueue(track)}
-                        disabled={addingId === track.id}
-                        className="p-2.5 hover:bg-green-600/20 text-green-400 hover:text-green-300 rounded-lg transition-colors flex-shrink-0"
+                        disabled={addingId === track.id || cooldownActive}
+                        className="p-2.5 hover:bg-green-600/20 text-green-400 hover:text-green-300 rounded-lg transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                         title="Add to queue"
                       >
                         {addingId === track.id ? (
