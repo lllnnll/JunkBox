@@ -92,7 +92,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-gray-400 text-sm">Room URL</p>
                 <p className="text-lg font-mono text-green-400">
-                  {typeof window !== 'undefined' && `${window.location.origin}${room.url}`}
+                    {typeof window !== 'undefined' && `${window.location.origin}${room.url}`.split('%')[0]}
                 </p>
               </div>
               <div>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <button
-                onClick={() => router.push(room.url)}
+                onClick={() => router.push(room.url.split('%')[0])}
                 className="mt-6 px-6 py-3 bg-green-600 hover:bg-green-700 rounded font-semibold transition w-full"
               >
                 Enter Your Room
