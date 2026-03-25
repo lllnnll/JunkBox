@@ -37,8 +37,12 @@ export async function POST(request: NextRequest) {
         // Perform bulk update of positions for this room only
         await prisma.$transaction(
             orderedIds.map((id, index) =>
-                prisma.request.update({
-                    where: { id },
+                prisma.request.updateMany({
+                    where: {
+                        id,
+                        roomId: room.id,
+                        status: 'PENDING',
+                    },
                     data: { position: index },
                 })
             )

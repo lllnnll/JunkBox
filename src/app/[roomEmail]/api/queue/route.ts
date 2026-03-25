@@ -5,6 +5,88 @@ import { prisma } from '@/lib/prisma';
 import { getAdminSpotifyApi } from '@/lib/spotify-admin';
 import { getRoomBySlug, getRoomSetting, isRoomActiveBySlug } from '@/lib/room';
 
+const AUTO_ADVANCE_THRESHOLD_MS = 10000;
+
+async function claimNextPendingRequest(roomId: string) {
+    return prisma.$transaction(async (tx) => {
+        const nextPending = await tx.request.findFirst({
+            where: {
+                roomId,
+                status: 'PENDING',
+            },
+            orderBy: [
+                { position: 'asc' },
+                { createdAt: 'asc' },
+            ],
+        });
+
+        if (!nextPending) {
+            return null;
+        }
+
+        const claimed = await tx.request.updateMany({
+            where: {
+                id: nextPending.id,
+                status: 'PENDING',
+            },
+            data: {
+                status: 'PLAYING',
+            },
+        });
+
+        if (claimed.count === 0) {
+            return null;
+        }
+
+        return nextPending;
+    });
+}
+
+async function syncCurrentlyPlayingRequest(roomId: string, spotifyUri: string) {
+    await prisma.$transaction(async (tx) => {
+        const matchingPlayingRequest = await tx.request.findFirst({
+            where: {
+                roomId,
+                status: 'PLAYING',
+                spotifyUri,
+            },
+            orderBy: [
+                { position: 'asc' },
+                { createdAt: 'asc' },
+            ],
+        });
+
+        if (matchingPlayingRequest) {
+            await tx.request.update({
+                where: { id: matchingPlayingRequest.id },
+                data: { status: 'PLAYED' },
+            });
+            return;
+        }
+
+        const pendingMatchingRequest = await tx.request.findFirst({
+            where: {
+                roomId,
+                status: 'PENDING',
+                spotifyUri,
+            },
+            orderBy: [
+                { position: 'asc' },
+                { createdAt: 'asc' },
+            ],
+        });
+
+        if (!pendingMatchingRequest) {
+            return;
+        }
+
+        await tx.request.update({
+            where: { id: pendingMatchingRequest.id },
+            data: { status: 'PLAYED' },
+        });
+    });
+}
+
 function formatDurationFr(totalSeconds: number): string {
     const safeSeconds = Math.max(0, totalSeconds);
     const minutes = Math.floor(safeSeconds / 60);
@@ -99,19 +181,10 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        let queuedOnSpotify = false;
-        try {
-            const spotify = await getAdminSpotifyApi();
-            await spotify.addToQueue(spotifyUri);
-            queuedOnSpotify = true;
-        } catch (err) {
-            console.error('Failed to add to Spotify Queue:', err);
-        }
-
         return NextResponse.json({
             success: true,
             request: newRequest,
-            queuedOnSpotify
+            queuedOnSpotify: false
         });
 
     } catch (error) {
@@ -145,6 +218,9 @@ export async function GET(request: NextRequest) {
 
             if (playback.body && playback.body.item) {
                 const item = playback.body.item as SpotifyApi.TrackObjectFull;
+
+                await syncCurrentlyPlayingRequest(room.id, item.uri);
+
                 currentTrack = {
                     title: item.name,
                     artist: item.artists.map(a => a.name).join(', '),
@@ -158,25 +234,56 @@ export async function GET(request: NextRequest) {
                 const dbRequest = await prisma.request.findFirst({
                     where: { 
                         spotifyUri: item.uri,
-                        roomId: room.id 
+                        roomId: room.id,
+                        status: {
+                            in: ['PLAYING', 'PLAYED', 'PENDING']
+                        }
                     },
-                    orderBy: { createdAt: 'desc' }
+                    orderBy: [
+                        { status: 'asc' },
+                        { createdAt: 'desc' }
+                    ]
                 });
                 if (dbRequest) {
                     currentTrack.requestedBy = dbRequest.requestedBy;
                 }
 
-                // Auto-update status to PLAYED if this track was in our queue
-                await prisma.request.updateMany({
-                    where: {
-                        spotifyUri: item.uri,
-                        status: 'PENDING',
-                        roomId: room.id
-                    },
-                    data: {
-                        status: 'PLAYED'
+                const progressMs = playback.body.progress_ms ?? 0;
+                const durationMs = item.duration_ms ?? 0;
+                const remainingMs = durationMs - progressMs;
+                const shouldAutoAdvance =
+                    playback.body.is_playing &&
+                    durationMs > 0 &&
+                    remainingMs <= AUTO_ADVANCE_THRESHOLD_MS;
+
+                if (shouldAutoAdvance) {
+                    const alreadyQueuedFromDb = await prisma.request.count({
+                        where: {
+                            roomId: room.id,
+                            status: 'PLAYING',
+                        },
+                    });
+
+                    if (alreadyQueuedFromDb === 0) {
+                        const nextRequest = await claimNextPendingRequest(room.id);
+                        if (nextRequest) {
+                            try {
+                                await spotify.addToQueue(nextRequest.spotifyUri);
+                            } catch (queueError) {
+                                await prisma.request.updateMany({
+                                    where: {
+                                        id: nextRequest.id,
+                                        status: 'PLAYING',
+                                    },
+                                    data: {
+                                        status: 'PENDING',
+                                    },
+                                });
+                                throw queueError;
+                            }
+                        }
                     }
-                });
+                }
             }
         } catch (e) {
             console.error("Failed to get playback sync and update. Error:", e);

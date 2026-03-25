@@ -103,10 +103,14 @@ export default function AdminPage() {
     };
 
     const handleReorder = async (fromIdx: number, toIdx: number) => {
-        const fromId = queue[fromIdx]?.id;
-        const toId = queue[toIdx]?.id;
+        if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
 
-        if (!fromId || !toId) return;
+        const reordered = [...queue];
+        const [moved] = reordered.splice(fromIdx, 1);
+        if (!moved) return;
+        reordered.splice(toIdx, 0, moved);
+
+        setQueue(reordered);
 
         setIsLoading(true);
         try {
@@ -114,8 +118,7 @@ export default function AdminPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    fromId,
-                    toId,
+                    orderedIds: reordered.map((item) => item.id),
                 }),
             });
             await fetchData();
@@ -183,7 +186,7 @@ export default function AdminPage() {
                 {/* Header */}
                 <div className="space-y-2">
                     <h1 className="text-4xl font-bold">Admin Controls</h1>
-                    <p className="text-zinc-400">Manage {roomSlug}'s queue</p>
+                    <p className="text-zinc-400">Manage {roomSlug}&apos;s queue</p>
                 </div>
 
                 {/* Current Track and Controls */}
