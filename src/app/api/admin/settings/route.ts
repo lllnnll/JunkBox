@@ -26,9 +26,10 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { cooldownSeconds } = body;
+        const rawCooldown = body.cooldownSeconds ?? body.cooldown_seconds;
+        const cooldownSeconds = Number.parseInt(String(rawCooldown), 10);
 
-        if (cooldownSeconds === undefined || isNaN(parseInt(cooldownSeconds))) {
+        if (!Number.isFinite(cooldownSeconds) || cooldownSeconds < 0) {
             return NextResponse.json({ error: 'Invalid cooldown value' }, { status: 400 });
         }
 

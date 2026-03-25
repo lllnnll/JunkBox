@@ -51,7 +51,9 @@ export default function AdminPage() {
             // Fetch cooldown setting
             const settingsRes = await fetch(`/${encodeURIComponent(roomSlug)}/api/admin/settings`);
             const settingsData = await settingsRes.json();
-            if (settingsData.cooldown_seconds) setCooldown(settingsData.cooldown_seconds);
+            if (typeof settingsData.cooldownSeconds === "number") {
+                setCooldown(settingsData.cooldownSeconds);
+            }
         } catch (e) {
             console.error(e);
         }
@@ -141,7 +143,7 @@ export default function AdminPage() {
             await fetch(`/${encodeURIComponent(roomSlug)}/api/admin/settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ cooldown_seconds: value }),
+                body: JSON.stringify({ cooldownSeconds: value }),
             });
         } catch (e) {
             console.error(e);
@@ -206,7 +208,12 @@ export default function AdminPage() {
                                 min="0"
                                 max="3600"
                                 value={cooldown}
-                                onChange={(e) => handleCooldownChange(parseInt(e.target.value))}
+                                onChange={(e) => {
+                                    const nextValue = Number.parseInt(e.target.value, 10);
+                                    if (!Number.isNaN(nextValue)) {
+                                        handleCooldownChange(nextValue);
+                                    }
+                                }}
                                 className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-white/10 text-white focus:outline-none focus:border-green-500"
                             />
                             <p className="text-xs text-zinc-500 mt-2">
