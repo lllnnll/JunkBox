@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
-import { getRoomBySlug, isRoomActiveBySlug } from '@/lib/room';
+import { getRoomBySlug, isRoomActiveBySlug, isRoomOwner } from '@/lib/room';
 
 export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
@@ -24,6 +24,10 @@ export async function POST(request: NextRequest) {
     const room = await getRoomBySlug(roomSlug);
     if (!room) {
         return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    }
+
+    if (!isRoomOwner(session, room)) {
+        return NextResponse.json({ error: 'Only the room host can do this' }, { status: 403 });
     }
 
     try {

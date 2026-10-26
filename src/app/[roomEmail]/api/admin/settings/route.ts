@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getRoomBySlug, getRoomSetting, setRoomSetting, isRoomActiveBySlug } from '@/lib/room';
+import { getRoomBySlug, getRoomSetting, setRoomSetting, isRoomActiveBySlug, isRoomOwner } from '@/lib/room';
 
 export async function GET(request: NextRequest) {
     const roomSlug = request.headers.get('x-room-slug');
@@ -52,6 +52,10 @@ export async function POST(request: NextRequest) {
     const room = await getRoomBySlug(roomSlug);
     if (!room) {
         return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    }
+
+    if (!isRoomOwner(session, room)) {
+        return NextResponse.json({ error: 'Only the room host can do this' }, { status: 403 });
     }
 
     try {

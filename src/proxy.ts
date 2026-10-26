@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { RESERVED_SLUGS } from '@/lib/room-slug';
 
 export function proxy(request: NextRequest) {
   // Add the room slug to the request headers if it exists in the path
   const { pathname } = request.nextUrl;
   
-  // Extract slug from path like /nikita/... (just the username before @)
+  // Extract slug from path like /nikita/... (or a host email, resolved by getRoomBySlug)
   const pathSegments = pathname.split('/').filter(Boolean);
   if (pathSegments.length > 0) {
     const firstSegment = pathSegments[0];
-    // Check if it looks like an email (contains @) or just a slug
-    if (!firstSegment.includes('@') && firstSegment !== 'api' && firstSegment !== 'auth' && firstSegment !== 'admin' && firstSegment !== 'dashboard' && firstSegment !== 'display') {
+    if (!RESERVED_SLUGS.includes(firstSegment)) {
       // This looks like a room slug
       const requestHeaders = new Headers(request.headers);
       requestHeaders.set('x-room-slug', decodeURIComponent(firstSegment));

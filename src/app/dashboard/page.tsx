@@ -27,7 +27,7 @@ export default function DashboardPage() {
           if (data.room) {
             setRoom(data.room);
           } else {
-            setError("You don't have a room yet. Ask an admin to enable you as a host.");
+            setError("Your room could not be created. Try signing out and in again.");
           }
         } catch (err) {
           setError("Failed to load your room");
@@ -92,17 +92,17 @@ export default function DashboardPage() {
               <div>
                 <p className="text-gray-400 text-sm">Room URL</p>
                 <p className="text-lg font-mono text-green-400">
-                    {typeof window !== 'undefined' && `${window.location.origin}${room.url}`.split('%')[0]}
+                    {typeof window !== 'undefined' && `${window.location.origin}${room.url}`}
                 </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm">Share with guests</p>
                 <p className="text-sm text-gray-300">
-                  Give guests your email address above and they can join your room from the home page.
+                  Give guests the room URL above, or your room code <span className="font-mono text-green-400">{room.slug}</span> to enter on the home page.
                 </p>
               </div>
               <button
-                onClick={() => router.push(room.url.split('%')[0])}
+                onClick={() => router.push(room.url)}
                 className="mt-6 px-6 py-3 bg-green-600 hover:bg-green-700 rounded font-semibold transition w-full"
               >
                 Enter Your Room

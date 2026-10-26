@@ -22,6 +22,7 @@ export async function POST(request: Request) {
             room: {
                 id: room.id,
                 email: room.email,
+                slug: room.slug,
                 name: room.name,
             }
         });
@@ -47,8 +48,9 @@ export async function GET(request: Request) {
             room: {
                 id: room.id,
                 email: room.email,
+                slug: room.slug,
                 name: room.name,
-                url: `/${encodeURIComponent(room.email)}`
+                url: `/${room.slug}`
             }
         });
     } catch (error) {

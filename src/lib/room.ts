@@ -1,30 +1,19 @@
+import type { Session } from 'next-auth';
 import { prisma } from './prisma';
+import { RESERVED_SLUGS, slugFromEmail } from './room-slug';
 
 /**
- * Extract slug (part before @) from an email
- */
-function getEmailSlug(email: string): string {
-  return email.split('@')[0];
-}
-
-/**
- * Get a room by slug (username before @)
- * @param slug - The room slug (e.g., "nikita" from "nikita@spotify.com")
+ * Get a room by slug, or by host email (guests may type the host's email)
+ * @param slugOrEmail - The room slug (e.g., "nikita") or the host's email
  * @returns The room object or null
  */
-export async function getRoomBySlug(slug: string) {
+export async function getRoomBySlug(slugOrEmail: string) {
   try {
-    const room = await prisma.room.findFirst({
-      where: {
-        email: {
-          startsWith: slug + '@',
-        },
-      },
-      include: {
-        host: true,
-      },
-    });
-    return room;
+    const include = { host: { include: { spotifyApp: true } } };
+    if (slugOrEmail.includes('@')) {
+      return await prisma.room.findUnique({ where: { email: slugOrEmail }, include });
+    }
+    return await prisma.room.findUnique({ where: { slug: slugOrEmail.toLowerCase() }, include });
   } catch (error) {
     console.error('Error in getRoomBySlug:', error);
     return null;
@@ -39,10 +28,34 @@ export async function getRoomBySlug(slug: string) {
 export async function isRoomActiveBySlug(slug: string): Promise<boolean> {
   try {
     const room = await getRoomBySlug(slug);
-    return room !== null && room.host.isHost;
+    return room !== null && room.host.isHost && room.host.refreshToken !== null;
   } catch (error) {
     console.error('Error in isRoomActiveBySlug:', error);
     return false;
+  }
+}
+
+/**
+ * Check that the logged in user is the host of the room
+ */
+export function isRoomOwner(session: Session | null, room: { email: string }): boolean {
+  return !!session?.user?.email && session.user.email === room.email;
+}
+
+/**
+ * Find a slug based on the host email that no other room uses ("nikita", "nikita-2"...)
+ */
+async function generateUniqueSlug(hostEmail: string): Promise<string> {
+  const base = slugFromEmail(hostEmail);
+
+  for (let i = 1; ; i++) {
+    const candidate = i === 1 ? base : `${base}-${i}`;
+    if (RESERVED_SLUGS.includes(candidate)) continue;
+
+    const existing = await prisma.room.findUnique({ where: { slug: candidate } });
+    if (!existing || existing.email === hostEmail) {
+      return candidate;
+    }
   }
 }
 
@@ -62,12 +75,19 @@ export async function getOrCreateRoom(hostEmail: string) {
       return null;
     }
 
-    // Get or create room
+    const existing = await prisma.room.findUnique({ where: { email: hostEmail } });
+    if (existing?.slug) {
+      return existing;
+    }
+
+    // Create the room, or backfill the slug of a room created before slugs existed
+    const slug = await generateUniqueSlug(hostEmail);
     const room = await prisma.room.upsert({
       where: { email: hostEmail },
-      update: {},
+      update: { slug },
       create: {
         email: hostEmail,
+        slug,
         name: host.name || hostEmail,
         hostId: host.id,
       },

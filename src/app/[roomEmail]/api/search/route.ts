@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getClientCredentialsToken, spotifyApi } from '@/lib/spotify';
+import { getAppSpotifyApi } from '@/lib/spotify';
 import { isRoomActiveBySlug } from '@/lib/room';
 
 export async function GET(request: NextRequest) {
@@ -22,11 +22,10 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Ensure we have a token
-        await getClientCredentialsToken();
+        const spotify = await getAppSpotifyApi();
 
         // Search tracks
-        const response = await spotifyApi.searchTracks(q, { limit: 10 });
+        const response = await spotify.searchTracks(q, { limit: 10 });
         const tracks = response.body.tracks?.items.map(track => ({
             id: track.id,
             uri: track.uri,

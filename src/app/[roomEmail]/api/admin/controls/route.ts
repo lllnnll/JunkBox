@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
-import { getRoomBySlug, isRoomActiveBySlug } from '@/lib/room';
-import { getAdminSpotifyApi } from '@/lib/spotify-admin';
+import { getRoomBySlug, isRoomActiveBySlug, isRoomOwner } from '@/lib/room';
+import { getHostSpotifyApi } from '@/lib/spotify-admin';
 
 export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
@@ -27,9 +27,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
+    if (!isRoomOwner(session, room)) {
+        return NextResponse.json({ error: 'Only the room host can do this' }, { status: 403 });
+    }
+
     try {
         const { action } = await request.json();
-        const spotify = await getAdminSpotifyApi();
+        const spotify = await getHostSpotifyApi(room.host);
 
         if (action === 'skip') {
             const playback = await spotify.getMyCurrentPlayingTrack();

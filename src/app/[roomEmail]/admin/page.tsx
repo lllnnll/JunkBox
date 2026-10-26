@@ -43,6 +43,19 @@ export default function AdminPage() {
         }
     }, [session, router, roomSlug]);
 
+    // Redirect if the logged in user is not this room's host
+    useEffect(() => {
+        if (!session) return;
+        fetch("/api/room")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.room?.slug !== roomSlug.toLowerCase()) {
+                    router.push(`/${encodeURIComponent(roomSlug)}`);
+                }
+            })
+            .catch(console.error);
+    }, [session, router, roomSlug]);
+
     const fetchData = async () => {
         try {
             const res = await fetch(`/${encodeURIComponent(roomSlug)}/api/queue`);

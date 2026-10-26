@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from '@/lib/prisma';
-import { getAdminSpotifyApi } from '@/lib/spotify-admin';
-import { getRoomBySlug, getRoomSetting, isRoomActiveBySlug } from '@/lib/room';
+import { getHostSpotifyApi } from '@/lib/spotify-admin';
+import { getRoomBySlug, getRoomSetting, isRoomActiveBySlug, isRoomOwner } from '@/lib/room';
 
 const AUTO_ADVANCE_THRESHOLD_MS = 10000;
 
@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
 
         let currentTrack = null;
         try {
-            const spotify = await getAdminSpotifyApi();
+            const spotify = await getHostSpotifyApi(room.host);
             const playback = await spotify.getMyCurrentPlayingTrack();
 
             if (playback.body && playback.body.item) {
@@ -302,7 +302,11 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        return NextResponse.json({ requests, currentTrack });
+        return NextResponse.json({
+            room: { slug: room.slug, name: room.name },
+            requests,
+            currentTrack
+        });
     } catch (error) {
         console.error('Queue GET error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -323,6 +327,10 @@ export async function DELETE(request: NextRequest) {
     const room = await getRoomBySlug(roomSlug);
     if (!room) {
         return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    }
+
+    if (!isRoomOwner(session, room)) {
+        return NextResponse.json({ error: 'Only the room host can do this' }, { status: 403 });
     }
 
     const body = await request.json();

@@ -18,11 +18,25 @@ model User {
   createdAt    DateTime  @default(now())
   requests     Request[]
   rooms        Room[]    // Rooms this user is a host of
+
+  // Spotify app the user logged in with (null = default app from .env)
+  spotifyApp   SpotifyApp? @relation(fields: [spotifyAppId], references: [id])
+  spotifyAppId String?
+}
+
+// A host's own Spotify Developer app
+model SpotifyApp {
+  id                    String   @id @default(cuid())
+  clientId              String   @unique
+  clientSecretEncrypted String
+  createdAt             DateTime @default(now())
+  users                 User[]
 }
 
 model Room {
   id        String    @id @default(cuid())
   email     String    @unique // Host's Spotify email
+  slug      String?   @unique // Public room URL (/slug), backfilled by getOrCreateRoom
   name      String?
   createdAt DateTime  @default(now())
   

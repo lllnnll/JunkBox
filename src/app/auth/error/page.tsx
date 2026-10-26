@@ -24,16 +24,15 @@ function ErrorContent() {
                 {isSpotify403 ? (
                     <div className="space-y-4 text-zinc-400 text-sm leading-relaxed text-left bg-zinc-950/50 p-4 rounded-lg border border-zinc-800">
                         <p>
-                            Il semble que ton compte Spotify ne soit pas encore autorisé à accéder à cette application.
+                            Il semble que ton compte Spotify ne soit pas autorisé sur l&apos;app Spotify utilisée pour te connecter.
                         </p>
                         <p className="font-medium text-zinc-300">
-                            Pour régler ça, l'administrateur doit :
+                            Pour régler ça :
                         </p>
                         <ul className="list-disc pl-5 space-y-2">
-                            <li>Aller sur le <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">Spotify Developer Dashboard</a></li>
-                            <li>Sélectionner l'application <strong>JunkBox</strong></li>
-                            <li>Aller dans l'onglet <strong>Users and Access</strong></li>
-                            <li>Ajouter ton adresse email Spotify à la liste</li>
+                            <li>Connecte-toi avec le compte Spotify qui a créé l&apos;app sur le <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">Spotify Developer Dashboard</a></li>
+                            <li>Ou ajoute ton adresse email Spotify dans l&apos;onglet <strong>Users and Access</strong> de cette app</li>
+                            <li>Vérifie aussi que l&apos;URL de redirection de l&apos;app est exactement celle affichée sur la page de configuration</li>
                         </ul>
                     </div>
                 ) : (
@@ -44,7 +43,7 @@ function ErrorContent() {
 
                 <div className="pt-4">
                     <Link
-                        href="/admin"
+                        href="/setup"
                         className="inline-block w-full py-3 px-6 rounded-xl bg-white text-zinc-950 font-semibold hover:bg-zinc-200 transition-colors uppercase tracking-wider text-sm"
                     >
                         Réessayer
@@ -52,7 +51,7 @@ function ErrorContent() {
                 </div>
 
                 <p className="text-xs text-zinc-500">
-                    Si le problème persiste, contacte l'administrateur.
+                    Si le problème persiste, contacte l&apos;administrateur.
                 </p>
             </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { Music, ArrowRight, LogIn } from "lucide-react";
 
 export default function HomePage() {
@@ -17,19 +17,14 @@ export default function HomePage() {
     setError("");
     
     if (!roomEmail.trim()) {
-      setError("Please enter an email");
-      return;
-    }
-
-    if (!roomEmail.includes("@")) {
-      setError("Please enter a valid email");
+      setError("Please enter a room code or the host's email");
       return;
     }
 
     setLoading(true);
     try {
       // Verify the room exists
-      const res = await fetch(`/${encodeURIComponent(roomEmail)}/api/queue`);
+      const res = await fetch(`/${encodeURIComponent(roomEmail.trim())}/api/queue`);
       if (res.status === 403) {
         setError("This room is not active (host not registered)");
         return;
@@ -39,8 +34,9 @@ export default function HomePage() {
         return;
       }
       
-      // Navigate to the room
-      router.push(`/${encodeURIComponent(roomEmail)}`);
+      // Navigate to the room (always by slug, even if the host's email was typed)
+      const data = await res.json();
+      router.push(`/${data.room?.slug ?? encodeURIComponent(roomEmail.trim())}`);
     } catch (err) {
       setError("Failed to access room");
     } finally {
@@ -73,7 +69,7 @@ export default function HomePage() {
             </button>
           ) : (
             <button
-              onClick={() => signIn("spotify")}
+              onClick={() => router.push("/setup")}
               className="w-full py-3 bg-green-600 hover:bg-green-700 rounded font-semibold flex items-center justify-center gap-2 transition mb-4"
             >
               <LogIn className="w-4 h-4" />
@@ -89,13 +85,13 @@ export default function HomePage() {
                 Or Join a Room
               </label>
               <input
-                type="email"
+                type="text"
                 value={roomEmail}
                 onChange={(e) => {
                   setRoomEmail(e.target.value);
                   setError("");
                 }}
-                placeholder="host@example.com"
+                placeholder="room code or host@example.com"
                 className="w-full px-4 py-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-green-500 outline-none transition"
               />
               {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
@@ -118,7 +114,7 @@ export default function HomePage() {
           </form>
 
           <p className="text-gray-400 text-sm text-center mt-6">
-            Guests: Enter the host's email. Hosts: Sign in to create your room.
+            Guests: Enter the room code or the host&apos;s email. Hosts: Sign in with Spotify to get your room.
           </p>
         </div>
       </div>
