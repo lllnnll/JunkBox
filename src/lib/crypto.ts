@@ -3,12 +3,13 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypt
 const ALGORITHM = 'aes-256-gcm';
 
 function getKey(): Buffer {
-    const secret = process.env.SPOTIFY_SECRETS_KEY;
+    // Changing this secret makes the stored app secrets unreadable (hosts must redo /setup)
+    const secret = process.env.SPOTIFY_SECRETS_KEY || process.env.NEXTAUTH_SECRET;
     if (!secret) {
-        throw new Error('SPOTIFY_SECRETS_KEY is not set');
+        throw new Error('SPOTIFY_SECRETS_KEY or NEXTAUTH_SECRET must be set');
     }
-    // Accept any string and derive a 32 bytes key from it
-    return createHash('sha256').update(secret).digest();
+    // Accept any string and derive a 32 bytes key from it, distinct from NextAuth's own keys
+    return createHash('sha256').update(`junkbox-spotify-secrets:${secret}`).digest();
 }
 
 /**
