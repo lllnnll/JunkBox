@@ -13,7 +13,21 @@ export async function getRoomBySlug(slugOrEmail: string) {
     if (slugOrEmail.includes('@')) {
       return await prisma.room.findUnique({ where: { email: slugOrEmail }, include });
     }
-    return await prisma.room.findUnique({ where: { slug: slugOrEmail.toLowerCase() }, include });
+    const slug = slugOrEmail.toLowerCase();
+    const room = await prisma.room.findUnique({ where: { slug }, include });
+    if (room) {
+      return room;
+    }
+
+    // Rooms created before slugs existed: old links use the email prefix, give them a slug now
+    const legacyRoom = await prisma.room.findFirst({
+      where: { slug: null, email: { startsWith: slug + '@', mode: 'insensitive' } },
+    });
+    if (!legacyRoom) {
+      return null;
+    }
+    await getOrCreateRoom(legacyRoom.email);
+    return await prisma.room.findUnique({ where: { email: legacyRoom.email }, include });
   } catch (error) {
     console.error('Error in getRoomBySlug:', error);
     return null;
