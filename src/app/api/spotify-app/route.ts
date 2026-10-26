@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
     const app = await getSpotifyAppByClientId(request.cookies.get(SPOTIFY_APP_COOKIE)?.value);
 
     return NextResponse.json({
-        redirectUri: `${process.env.NEXTAUTH_URL}/api/auth/callback/spotify`,
+        // new URL() avoids a double slash when NEXTAUTH_URL ends with "/"
+        redirectUri: new URL('/api/auth/callback/spotify', process.env.NEXTAUTH_URL).toString(),
         clientId: app?.clientId ?? null,
     });
 }
