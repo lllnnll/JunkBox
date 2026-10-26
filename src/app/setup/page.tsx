@@ -8,6 +8,7 @@ export default function SetupPage() {
   const [redirectUri, setRedirectUri] = useState("");
   const [savedClientId, setSavedClientId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [defaultAppAvailable, setDefaultAppAvailable] = useState(false);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [copied, setCopied] = useState(false);
@@ -21,6 +22,7 @@ export default function SetupPage() {
         setRedirectUri(data.redirectUri);
         setSavedClientId(data.clientId);
         setShowForm(!data.clientId);
+        setDefaultAppAvailable(data.defaultAppAvailable);
       })
       .catch(console.error);
   }, []);
@@ -163,14 +165,16 @@ export default function SetupPage() {
             </>
           )}
 
-          <div className="border-t border-gray-600 pt-4 text-center">
-            <button
-              onClick={useDefaultApp}
-              className="text-xs text-gray-500 hover:text-gray-300 transition"
-            >
-              Already allowed on JunkBox&apos;s own Spotify app? Sign in with it
-            </button>
-          </div>
+          {defaultAppAvailable && (
+            <div className="border-t border-gray-600 pt-4 text-center">
+              <button
+                onClick={useDefaultApp}
+                className="text-xs text-gray-500 hover:text-gray-300 transition"
+              >
+                Already allowed on JunkBox&apos;s own Spotify app? Sign in with it
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

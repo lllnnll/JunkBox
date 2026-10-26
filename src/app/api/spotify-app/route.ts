@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { defaultCredentials } from '@/lib/spotify';
 import { getSpotifyAppByClientId, registerSpotifyApp, SPOTIFY_APP_COOKIE } from '@/lib/spotify-apps';
 
 // Spotify client IDs and secrets are 32 hex characters
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
         // new URL() avoids a double slash when NEXTAUTH_URL ends with "/"
         redirectUri: new URL('/api/auth/callback/spotify', process.env.NEXTAUTH_URL).toString(),
         clientId: app?.clientId ?? null,
+        defaultAppAvailable: defaultCredentials !== null,
     });
 }
 

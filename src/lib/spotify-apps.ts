@@ -11,6 +11,9 @@ export const SPOTIFY_APP_COOKIE = 'junkbox_spotify_app';
  */
 export function getAppCredentials(app: SpotifyApp | null): SpotifyCredentials {
     if (!app) {
+        if (!defaultCredentials) {
+            throw new Error('No Spotify app: set SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET or use /setup');
+        }
         return defaultCredentials;
     }
     return {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAppSpotifyApi } from '@/lib/spotify';
-import { isRoomActiveBySlug } from '@/lib/room';
+import { getAppCredentials } from '@/lib/spotify-apps';
+import { getRoomBySlug, isRoomActiveBySlug } from '@/lib/room';
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
@@ -22,7 +23,13 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const spotify = await getAppSpotifyApi();
+        const room = await getRoomBySlug(roomSlug);
+        if (!room) {
+            return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+        }
+
+        // Search with the host's own Spotify app
+        const spotify = await getAppSpotifyApi(getAppCredentials(room.host.spotifyApp));
 
         // Search tracks
         const response = await spotify.searchTracks(q, { limit: 10 });

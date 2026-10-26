@@ -4,6 +4,7 @@ import type { SpotifyApp } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateRoom } from "@/lib/room";
+import { defaultCredentials } from "@/lib/spotify";
 import { getAppCredentials, getSpotifyAppByClientId, SPOTIFY_APP_COOKIE } from "@/lib/spotify-apps";
 
 const scopes = [
@@ -21,13 +22,14 @@ const scopes = [
  * Auth options using the given Spotify app to sign in (null = default app from .env)
  */
 function buildAuthOptions(spotifyApp: SpotifyApp | null): NextAuthOptions {
-    const { clientId, clientSecret } = getAppCredentials(spotifyApp);
+    // No provider when there's neither a chosen app nor a default one: hosts must go through /setup
+    const credentials = spotifyApp ? getAppCredentials(spotifyApp) : defaultCredentials;
 
     return {
-        providers: [
+        providers: credentials ? [
             SpotifyProvider({
-                clientId,
-                clientSecret,
+                clientId: credentials.clientId,
+                clientSecret: credentials.clientSecret,
                 authorization: {
                     params: {
                         scope: scopes,
@@ -37,7 +39,7 @@ function buildAuthOptions(spotifyApp: SpotifyApp | null): NextAuthOptions {
                     },
                 },
             }),
-        ],
+        ] : [],
         callbacks: {
             async jwt({ token, account }) {
                 if (account) {

@@ -1,10 +1,11 @@
 import 'dotenv/config';
-import { getAppSpotifyApi } from '../src/lib/spotify';
+import { defaultCredentials, getAppSpotifyApi } from '../src/lib/spotify';
 
 async function main() {
     console.log('Testing Spotify Connection...');
     try {
-        const spotifyApi = await getAppSpotifyApi();
+        if (!defaultCredentials) throw new Error('SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET not set');
+        const spotifyApi = await getAppSpotifyApi(defaultCredentials);
         console.log('Token received successfully.');
 
         const data = await spotifyApi.searchTracks('Daft Punk');
